@@ -2,8 +2,6 @@ package com.example.delhimetronavigationapp
 
 import java.util.PriorityQueue
 
-
-// Fixed findShortestRoute function to properly track lines
 fun findShortestRoute(
     sourceId: String,
     destId: String,
@@ -62,10 +60,10 @@ fun findShortestRoute(
             val (line, time) = connection
             val currentLine = lines[currentId]
 
-            // Add penalty for line changes (3 minutes)
+            // Add penalty for line changes (8 minutes instead of 3)
             var lineChangePenalty = 0
             if (currentLine != null && currentLine != line) {
-                lineChangePenalty = 3
+                lineChangePenalty = 8  // Changed from 3 to 8 minutes
             }
 
             val distance = distances[currentId]!! + time + lineChangePenalty
