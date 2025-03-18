@@ -84,7 +84,7 @@ fun RouteDisplayScreen(sourceId: String, destId: String, navController: NavContr
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp),
+                        .padding(vertical = 16.dp)
                 ) {
                     Text(
                         modifier = Modifier.weight(1f),
@@ -100,7 +100,8 @@ fun RouteDisplayScreen(sourceId: String, destId: String, navController: NavContr
                         text = "→",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = Color.Black,
+                        textAlign = TextAlign.Center
                     )
 
                     Text(
