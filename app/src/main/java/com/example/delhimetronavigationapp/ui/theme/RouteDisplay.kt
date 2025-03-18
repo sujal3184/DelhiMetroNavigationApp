@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.style.TextAlign
 
 import androidx.navigation.NavController
 import com.example.delhimetronavigationapp.Route
@@ -81,29 +82,34 @@ fun RouteDisplayScreen(sourceId: String, destId: String, navController: NavContr
                     .padding(16.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
                 ) {
                     Text(
+                        modifier = Modifier.weight(1f),
                         text = sourceStation,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 4.dp),
-                        color = Color.Black
+                        color = Color.Black,
+                        textAlign = TextAlign.Center
                     )
+
                     Text(
-                        text = "    ->    ",
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        text = "→",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 4.dp),
                         color = Color.Black
                     )
+
                     Text(
+                        modifier = Modifier.weight(1f),
                         text = destStation,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 16.dp),
-                        color = Color.Black
+                        color = Color.Black,
+                        textAlign = TextAlign.Center
                     )
                 }
 
@@ -122,10 +128,57 @@ fun RouteDisplayScreen(sourceId: String, destId: String, navController: NavContr
 
 @Composable
 fun RouteDisplay(route: Route, stations: List<Station>) {
+    // Get connections from the parent component
+    val metroData = remember { createMetroData() }
+    val connections = metroData.second
+
     // Calculate total time including walking time for line changes
     val lineChangesCount = if (route.lineChanges.isNotEmpty()) route.lineChanges.size - 1 else 0
     val totalWalkingTime = lineChangesCount * 8 // 8 minutes per line change
     val totalTravelTimeWithWalking = route.totalTime + totalWalkingTime
+
+    // Calculate cumulative time to reach each station
+    val timesToStations = remember(route) {
+        val times = mutableListOf<Int>()
+        var cumulativeTime = 0
+
+        // Add first station with time 0
+        times.add(cumulativeTime)
+
+        // Calculate time to reach each subsequent station
+        for (i in 0 until route.stations.size - 1) {
+            val fromId = route.stations[i]
+            val toId = route.stations[i + 1]
+
+            // Get the line for this segment
+            val line = if (i < route.lines.size) route.lines[i] else ""
+
+            // Check if there's a line change at the next station
+            val nextLine = if (i + 1 < route.lines.size) route.lines[i + 1] else line
+            val isLineChange = line != nextLine
+
+            // Add time for the segment (using the appropriate connection)
+            val connection = connections.find {
+                (it.fromStation == fromId && it.toStation == toId) ||
+                        (it.fromStation == toId && it.toStation == fromId)
+            }
+            val segmentTime = connection?.timeMins ?: 2 // Default 2 minutes if connection not found
+
+            // Add walking time if there's a line change
+            val walkingTime = if (isLineChange) 8 else 0
+
+            cumulativeTime += segmentTime
+            times.add(cumulativeTime)
+
+            // If there's a line change, add the walking time to the next station's time
+            if (isLineChange && i + 1 < times.size) {
+                cumulativeTime += walkingTime
+                times[i + 1] = cumulativeTime
+            }
+        }
+
+        times
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -137,7 +190,6 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-
                 Text(
                     text = "Total Travel Time:  ${totalTravelTimeWithWalking} minutes",
                     fontWeight = FontWeight.Medium,
@@ -152,8 +204,7 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
                     color = Color.Black
                 )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                Spacer(modifier = Modifier.height(8.dp))
 
                 HorizontalDivider()
 
@@ -162,7 +213,7 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
                         val stationId = route.stations[index]
                         val station = stations.find { it.id == stationId }
 
-                        // Determine the current line color and next line color
+                        // Determine the current line color
                         val currentLine = when {
                             // If we're at the start of the journey
                             index == 0 && route.lines.isNotEmpty() -> route.lines.first()
@@ -172,18 +223,15 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
                             else -> station?.lines?.firstOrNull() ?: ""
                         }
 
-                        // Determine if this station is where a line change happens
+                        // Determine if this is a line change station
+                        // We check if the current station is not the last one and
+                        // the line after this station is different from the current line
                         val isLineChange = index < route.stations.size - 1 &&
-                                index < route.lines.size - 1 &&
-                                index >= 0 &&
-                                route.lines[index] != currentLine
+                                index < route.lines.size &&
+                                currentLine != route.lines[index]
 
-                        // Get the next line if there's a line change
-                        val nextLine = if (isLineChange && index < route.lines.size) {
-                            route.lines[index]
-                        } else {
-                            null
-                        }
+                        // Get the line we're changing to
+                        val nextLine = if (isLineChange) route.lines[index] else null
 
                         val isInterchange = (station?.lines?.size ?: 0) > 1
 
@@ -211,9 +259,11 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(32.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
 
-                            Column {
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
                                 Text(
                                     text = station?.name ?: "",
                                     fontWeight = if (isInterchange) FontWeight.ExtraBold else FontWeight.Normal,
@@ -221,7 +271,7 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
                                     color = Color.Black
                                 )
 
-                                // Show line change information at the current station, not the next one
+                                // Show line change information if this is a line change station
                                 if (isLineChange && nextLine != null) {
                                     Text(
                                         text = "Change from $currentLine to $nextLine",
@@ -237,6 +287,17 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
+                            }
+
+                            // Show time to reach on the right side
+                            if (index < timesToStations.size) {
+                                Text(
+                                    text = "~${timesToStations[index]} min",
+                                    color = Color.DarkGray,
+                                    fontWeight = FontWeight.Light,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
                             }
                         }
                         if (index < route.stations.size - 1) {
