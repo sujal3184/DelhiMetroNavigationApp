@@ -120,9 +120,13 @@ fun RouteDisplayScreen(sourceId: String, destId: String, navController: NavContr
 
 
 
-// Fixed RouteDisplay to handle index bounds correctly
 @Composable
 fun RouteDisplay(route: Route, stations: List<Station>) {
+    // Calculate total time including walking time for line changes
+    val lineChangesCount = if (route.lineChanges.isNotEmpty()) route.lineChanges.size - 1 else 0
+    val totalWalkingTime = lineChangesCount * 8 // 8 minutes per line change
+    val totalTravelTimeWithWalking = route.totalTime + totalWalkingTime
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -135,20 +139,23 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
             ) {
 
                 Text(
-                    text = "Total Travel Time: ${route.totalTime} minutes",
+                    text = "Total Travel Time:  ${totalTravelTimeWithWalking} minutes",
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(bottom = 8.dp),
                     color = Color.Black
                 )
 
                 Text(
-                    text = "Line Changes: ${if (route.lineChanges.isNotEmpty()) route.lineChanges.size - 1 else 0}",
+                    text = "Line Changes:  ${lineChangesCount}",
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(bottom = 16.dp),
+                    modifier = Modifier.padding(bottom = 8.dp),
                     color = Color.Black
                 )
 
-                Divider()
+                    Spacer(modifier = Modifier.height(8.dp))
+
+
+                HorizontalDivider()
 
                 LazyColumn {
                     items(route.stations.indices.toList()) { index ->
@@ -220,6 +227,14 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
                                         text = "Change from $currentLine to $nextLine",
                                         fontSize = 12.sp,
                                         color = Color.Red
+                                    )
+
+                                    // Add walking time text
+                                    Text(
+                                        text = "Walking time: 8 min.",
+                                        fontSize = 12.sp,
+                                        color = Color.Blue,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
                             }
