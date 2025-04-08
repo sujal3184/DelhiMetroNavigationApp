@@ -135,8 +135,7 @@ fun RouteDisplay(route: Route, stations: List<Station>) {
 
     // Calculate total time including walking time for line changes
     val lineChangesCount = if (route.lineChanges.isNotEmpty()) route.lineChanges.size - 1 else 0
-    val totalWalkingTime = lineChangesCount * 8 // 8 minutes per line change
-    val totalTravelTimeWithWalking = route.totalTime + totalWalkingTime
+    val totalTravelTimeWithWalking = route.totalTime
 
     // Calculate cumulative time to reach each station
     val timesToStations = remember(route) {
